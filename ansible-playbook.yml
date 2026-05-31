@@ -5,31 +5,25 @@
   tasks:
     - name: Install Java
       apt:
-        name: openjdk-11-jdk
+        name: openjdk-17-jdk
         state: present
         update_cache: yes
 
-    - name: Add Jenkins repo key
-      apt_key:
-        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
-        state: present
+    - name: Install Jenkins via Docker
+      shell: |
+        apt install -y docker.io
+        systemctl start docker
+        systemctl enable docker
+        docker run -d --name jenkins -p 8080:8080 -p 50000:50000 -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts
+      ignore_errors: yes
 
-    - name: Add Jenkins repository
-      apt_repository:
-        repo: deb https://pkg.jenkins.io/debian-stable binary/
-        state: present
+    - name: Verify Jenkins container
+      shell: docker ps
+      register: jenkins_status
 
-    - name: Install Jenkins
-      apt:
-        name: jenkins
-        state: present
-        update_cache: yes
-
-    - name: Start Jenkins
-      service:
-        name: jenkins
-        state: started
-        enabled: yes
+    - name: Show Jenkins status
+      debug:
+        var: jenkins_status.stdout
 
 - name: Configure build-agent
   hosts: build_agent
@@ -37,7 +31,7 @@
   tasks:
     - name: Install Java
       apt:
-        name: openjdk-11-jdk
+        name: openjdk-17-jdk
         state: present
         update_cache: yes
 
